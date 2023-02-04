@@ -1,7 +1,11 @@
 class A():
-    def __int__(self, a):
+    def __init__(self):
         self.x = 1
-        return self
+    def d(self):
+        del self
 
-b = A(0)
-print(b.x)
+b = A()
+l = [1, 2, A(), b, 5]
+print(l)
+del b
+print(l)

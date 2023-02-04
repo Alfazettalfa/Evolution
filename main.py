@@ -11,10 +11,18 @@ Gene = ["mutation rate", "Offspring feeding", "max speed", "rand2"]
 gene_index = {v : i for i, v in enumerate(Gene)}
 WORLD_SIZE = 300
 START_POPULATION = 30
-START_FOOD = 40
+START_FOOD = 0
 
 class Subjekt:
     global gene_index, Gene
+
+    @property
+    def x(self):
+        return int(self.state["pos"][0]) % WORLD_SIZE
+
+    @property
+    def y(self):
+        return int(self.state["pos"][1]) % WORLD_SIZE
 
     @staticmethod
     def normalize(x):
@@ -27,6 +35,7 @@ class Subjekt:
     def __init__(self, gene = R(len(Gene)), state = {} ):
         self.state = Subjekt.get_random_state()
         self.gene = gene
+        self.dead = False
 
     def __radd__(self, other):
         return self.__add__(other)
@@ -64,6 +73,7 @@ class Subjekt:
         else: return
 
     def encounter_equal(self, other):
+        return
         Paarungswahrscheinlichkeit = Subjekt.normalize(self.taste_function(other))
         if R() <= Paarungswahrscheinlichkeit:
             Specimen.append(self + other)
@@ -78,7 +88,16 @@ class Subjekt:
             food.dead = True
 
     def update(self):
-        self.state["saturation"] *= 0.975
+        self.state["saturation"] *= 0.9
+        if self.state["saturation"] > 10:
+            self.state["health"] += .1
+            self.state["saturation"] -= .1
+        if self.state["saturation"] < 1:
+            self.state["health"] -= .03
+        if self.state["health"] <= 0:
+            self.dead = True
+
+
 
 
 
@@ -97,7 +116,7 @@ def delete_the_dead():
             dead_specimen.append(An)
     for An in dead_specimen:
         Specimen.remove(An)
-        world[int(An.state["pos"][0])][int(An.state["pos"][1])].remove(An)
+        world[An.x][An.y].remove(An)
         del An
     dead_Plants = []
     for P in Plants:
@@ -112,6 +131,7 @@ def delete_the_dead():
 t = 0
 dt = 0.1
 Specimen = [Subjekt() for _ in range(START_POPULATION)]
+next_Specimen, next_Plants = [], []
 Plants = [Food() for _ in range(START_FOOD)]
 next_world = [[[]] * WORLD_SIZE] * WORLD_SIZE
 while True:
@@ -119,6 +139,7 @@ while True:
     next_world = [[[]] * WORLD_SIZE] * WORLD_SIZE
     t += dt
     if R()<.1:
+        continue
         Plants.append(Food())
     for P in Plants:
         world[P.x][P.y].append(P)
@@ -127,7 +148,7 @@ while True:
         stepsize = An.stepsize_function()
         An.state["pos"] += np.array([np.cos(An.state["direction"]), np.sin(An.state["direction"])])*stepsize
         An.state["saturation"] -= stepsize**2/10
-        world[int(An.state["pos"][0])][int(An.state["pos"][1])].append(An)
+        world[An.x][An.y].append(An)
 
     for An in Specimen:
         base = [int(An.state["pos"][k]) for k in range(2)]
@@ -135,10 +156,12 @@ while True:
             for y in range(-3, 4):
                 for other in world[(base[0] + x)%WORLD_SIZE][(base[1] + y)%WORLD_SIZE]:
                     An.encounter(other)
-                    print(f'Plants: {len(Plants)}, Subjects: {len(Specimen)}')
         An.update()
 
-    print(f'Plants: {len(Plants)}, Subjects: {len(Specimen)}')
+    delete_the_dead()
+    try:
+        print(f'Plants: {len(Plants)}, Subjects: {len(Specimen)}, {Specimen[0].state["saturation"], Specimen[0].state["health"]}')
+    except L
 
 
 
