@@ -1,16 +1,32 @@
-# This is a sample Python script.
+import numpy as np
+import matplotlib.pyplot as plt
 
-# Press Umschalt+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
+R = np.random.rand
 
-import numpy
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Strg+F8 to toggle the breakpoint.
+gene_index = {}
+class Subjekt:
+    global gene_index
+    def __init__(self, gene = np.array([]), paras = {"taste": np.array([0]*10), "saturation" : R(), "health" : R()} ):
+        self.gene = gene
+        self.paras = paras
+    def __radd__(self, other):
+        return self.__add__(other)
 
 
-# Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    print_hi('PyCharm')
+    def taste_function(self, other):
+        return np.sum(np.abs(self.paras["taste"] - other.gene)) * np.sum(np.abs(other.paras["taste"] - self.gene))
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+    def __add__(self, other):
+        new_gene = ((.5 - R(self.gene.size)) * 2 * self.gene[self.gene_index["mutation rate"]] + self.gene)/2
+        + ((.5 - R(other.gene.size)) * 2 * other.gene[other.gene_index["mutation rate"]] + other.gene) / 2
+
+        return Subjekt(gene = new_gene, paras = self.newborn_paras(other))
+
+    def newborn_paras(self, other):
+        
+
+
+
+
+
+
