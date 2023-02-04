@@ -7,17 +7,23 @@ Rn = lambda: (R - .5) * 2
 
 Gene = ["mutation rate", "Offspring feeding", "max speed", "rand2"]
 gene_index = {v : i for i, v in enumerate(Gene)}
-world_diameter = 300
-start_individuen = 30
+WORLD_SIZE = 300
+START_POPULATION = 30
+START_FOOD = 40
 
 class Subjekt:
     global gene_index, Gene
+
     @staticmethod
-    def get_state():
-        return {"taste": R(len(Gene)), "saturation" : R(), "health" : R(), "pos":R(2)*world_diameter, "direction" : R()*2*np.pi}
+    def normalize(x):
+        return x
+
+    @staticmethod
+    def get_random_state():
+        return {"taste": R(len(Gene)), "saturation" : R(), "health" : R(), "pos":R(2)*WORLD_SIZE, "direction" : R()*2*np.pi}
 
     def __init__(self, gene = R(len(Gene)), state = {} ):
-        self.state = Subjekt.get_state()
+        self.state = Subjekt.get_random_state()
         self.gene = gene
     def __radd__(self, other):
         return self.__add__(other)
@@ -46,26 +52,75 @@ class Subjekt:
     def stepsize_function(self):
         return self.gene[gene_index["max speed"]]
 
+    def encounter(self, other):
+        if isinstance(other, Subjekt):
+            self.encounter_equal(other)
+
+        elif isinstance(other, Food):
+            self.encounter_food(other)
+        else: return
+
+    def encounter_equal(self, other):
+        Paarungswahrscheinlichkeit = Subjekt.normalize(self.taste_function(other))
+        if R() <= Paarungswahrscheinlichkeit:
+            Specimen.append(self + other)
+        return
+
+
+    def encounter_food(self, food):
+        if not food.dead:
+            self.state["saturation"] += max([1, food.saturation])
+            food.saturation -= max([1, food.saturation])
+        if food.saturation <= 0:
+            food.dead = True
+
+
 
 class Food:
-    def __int__(self):
+    def __int__(self, x = random.randint(WORLD_SIZE), y = random.randint(WORLD_SIZE)):
+        self.dead = False
         self.nutrition = np.random.randint(1, 11)
+        self.x, self.y = x, y
+
+
+
+def delete_the_dead():
+    for An in Specimen:
+        if An.state["health"] <= 0:
+            Specimen.remove(An)
+            world[int(An.state["pos"][0])][int(An.state["pos"][1])].remove(An)
+    for P in Plants:
+        if P.dead:
+            Plants.remove(P)
+            world[P.x][P.y].remove(P)
 
 
 
 t = 0
 dt = 0.1
-world = np.random.randint(low = 0, high = 2, size = (world_diameter, world_diameter))
-x_world, y_world = np.zeros(shape=(world_diameter), dtype="int16"), np.zeros(shape=(world_diameter), dtype="int16")
-Specimen = []
-for _ in range(start_individuen): Specimen.append(Subjekt())
+Specimen = [Subjekt() for _ in range(START_POPULATION)]
+Plants = [Food() for _ in range(START_FOOD)]
 
 while True:
+    world = [[[]] * WORLD_SIZE] * WORLD_SIZE
     t += dt
-    for An in random.permutation(Specimen):
+    for An in random.permutation(Specimen): #move
         stepsize = An.stepsize_function()
         An.state["pos"] += np.array([np.cos(An.state["direction"]), np.sin(An.state["direction"])])*stepsize
-        An.state["saturation"] -= stepsize/10
+        An.state["saturation"] -= stepsize**2/10
+        world[int(An.state["pos"][0])][int(An.state["pos"][1])].append(An)
+
+    for An in Specimen:
+        base = [int(An.state["pos"][k]) for k in range(2)]
+        for x in range(-3, 4):
+            for y in range(-3, 4):
+                for other in world[(base[0] + x)%WORLD_SIZE][(base[1] + y)%WORLD_SIZE]:
+                    An.encounter(other)
+
+
+
+
+
 
 
 
