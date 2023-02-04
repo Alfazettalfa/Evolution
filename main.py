@@ -1,3 +1,5 @@
+from copy import copy, deepcopy
+
 import numpy as np
 from numpy import random
 import matplotlib.pyplot as plt
@@ -20,11 +22,12 @@ class Subjekt:
 
     @staticmethod
     def get_random_state():
-        return {"taste": R(len(Gene)), "saturation" : R(), "health" : R(), "pos":R(2)*WORLD_SIZE, "direction" : R()*2*np.pi}
+        return {"taste": R(len(Gene)), "saturation" : random.randint(10), "health" : R(), "pos":R(2)*WORLD_SIZE, "direction" : R()*2*np.pi}
 
     def __init__(self, gene = R(len(Gene)), state = {} ):
         self.state = Subjekt.get_random_state()
         self.gene = gene
+
     def __radd__(self, other):
         return self.__add__(other)
 
@@ -33,15 +36,15 @@ class Subjekt:
         return np.sum(np.abs(self.state["taste"] - other.gene)) * np.sum(np.abs(other.state["taste"] - self.gene))
 
     def __add__(self, other):
-        new_gene = ((.5 - R(self.gene.size)) * 2 * self.gene[self.gene_index["mutation rate"]] + self.gene)/2
-        + ((.5 - R(other.gene.size)) * 2 * other.gene[other.gene_index["mutation rate"]] + other.gene) / 2
+        new_gene = ((.5 - R(self.gene.size)) * 2 * self.gene[gene_index["mutation rate"]] + self.gene)/2
+        + ((.5 - R(other.gene.size)) * 2 * other.gene[gene_index["mutation rate"]] + other.gene) / 2
 
         return Subjekt(gene = new_gene, state = self.newborn_state(other))
 
     def newborn_state(self, other):
         random = np.random.randint(0, 2, size = (len(self.state["taste"])))
         new_state = {"taste" : np.array([self.state["taste"][i] if v != 0 else other.state["taste"][i] for i, v in enumerate(random)])}
-        new_state["saturation"] = self.gene[gene_index["Offspring feeding"]]*self.state["saturation"] +  other.gene[other.gene_index["Offspring feeding"]]*other.state["saturation"]
+        new_state["saturation"] = self.gene[gene_index["Offspring feeding"]]*self.state["saturation"] +  other.gene[gene_index["Offspring feeding"]]*other.state["saturation"]
         self.state["saturation"] -= self.gene[gene_index["Offspring feeding"]] * self.state["saturation"]
         other.state["saturation"] -= other.gene[gene_index["Offspring feeding"]] * other.state["saturation"]
         for para in ["health", "pos", "direction"]: new_state[para] = (other.state[para] + self.state[para])/2
@@ -69,15 +72,18 @@ class Subjekt:
 
     def encounter_food(self, food):
         if not food.dead:
-            self.state["saturation"] += max([1, food.saturation])
-            food.saturation -= max([1, food.saturation])
-        if food.saturation <= 0:
+            self.state["saturation"] += max([1, food.nutrition])
+            food.nutrition -= max([1, food.nutrition])
+        if food.nutrition <= 0:
             food.dead = True
+
+    def update(self):
+        self.state["saturation"] *= 0.975
 
 
 
 class Food:
-    def __int__(self, x = random.randint(WORLD_SIZE), y = random.randint(WORLD_SIZE)):
+    def __init__(self, x = random.randint(WORLD_SIZE), y = random.randint(WORLD_SIZE)):
         self.dead = False
         self.nutrition = np.random.randint(1, 11)
         self.x, self.y = x, y
@@ -85,25 +91,38 @@ class Food:
 
 
 def delete_the_dead():
+    dead_specimen = []
     for An in Specimen:
         if An.state["health"] <= 0:
-            Specimen.remove(An)
-            world[int(An.state["pos"][0])][int(An.state["pos"][1])].remove(An)
+            dead_specimen.append(An)
+    for An in dead_specimen:
+        Specimen.remove(An)
+        world[int(An.state["pos"][0])][int(An.state["pos"][1])].remove(An)
+        del An
+    dead_Plants = []
     for P in Plants:
         if P.dead:
-            Plants.remove(P)
-            world[P.x][P.y].remove(P)
-
+            dead_Plants.append(P)
+    for P in dead_Plants:
+        Plants.remove(P)
+        world[P.x][P.y].remove(P)
+        del P
 
 
 t = 0
 dt = 0.1
 Specimen = [Subjekt() for _ in range(START_POPULATION)]
 Plants = [Food() for _ in range(START_FOOD)]
-
+next_world = [[[]] * WORLD_SIZE] * WORLD_SIZE
 while True:
-    world = [[[]] * WORLD_SIZE] * WORLD_SIZE
+    world = deepcopy(next_world)
+    next_world = [[[]] * WORLD_SIZE] * WORLD_SIZE
     t += dt
+    if R()<.1:
+        Plants.append(Food())
+    for P in Plants:
+        world[P.x][P.y].append(P)
+
     for An in random.permutation(Specimen): #move
         stepsize = An.stepsize_function()
         An.state["pos"] += np.array([np.cos(An.state["direction"]), np.sin(An.state["direction"])])*stepsize
@@ -116,6 +135,10 @@ while True:
             for y in range(-3, 4):
                 for other in world[(base[0] + x)%WORLD_SIZE][(base[1] + y)%WORLD_SIZE]:
                     An.encounter(other)
+                    print(f'Plants: {len(Plants)}, Subjects: {len(Specimen)}')
+        An.update()
+
+    print(f'Plants: {len(Plants)}, Subjects: {len(Specimen)}')
 
 
 
