@@ -40,7 +40,8 @@ class Subjekt:
 
 
     def taste_function(self, other):
-        return np.sum(np.abs(self.state['taste'] - other.gene)) * np.sum(np.abs(other.state['taste'] - self.gene))
+        return np.sum(np.abs(self.state['taste'] - other.gene)) * \
+            np.sum(np.abs(other.state['taste'] - self.gene))
 
     def __add__(self, other):
         new_gene = ((.5 - R(self.gene.size)) * 2 * self.gene[GLOBAL['Gen Index']['mutation rate']] + self.gene)/2
@@ -50,8 +51,9 @@ class Subjekt:
 
     def newborn_state(self, other):
         random = np.random.randint(0, 2, size = (len(self.state['taste'])))
-        new_state = {'taste' : np.array([self.state['taste'][i] if v != 0 else other.state['taste'][i] for i, v in enumerate(random)])}
-        new_state['saturation'] = self.gene[GLOBAL['Gen Index']['Offspring feeding']]*self.state['saturation'] +  other.gene[GLOBAL['Gen Index']['Offspring feeding']]*other.state['saturation']
+        new_state = {'taste' : np.array([self.state['taste'][i]
+                                         if v != 0 else other.state['taste'][i] for i, v in enumerate(random)])}
+        new_state['saturation'] = self.gene[GLOBAL['Gen Index']['Offspring feeding']] * self.state['saturation'] +  other.gene[GLOBAL['Gen Index']['Offspring feeding']]*other.state['saturation']
         self.state['saturation'] -= self.gene[GLOBAL['Gen Index']['Offspring feeding']] * self.state['saturation']
         other.state['saturation'] -= other.gene[GLOBAL['Gen Index']['Offspring feeding']] * other.state['saturation']
         for para in ['health', 'pos', 'direction']: new_state[para] = (other.state[para] + self.state[para])/2

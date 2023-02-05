@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <!--
+    {%for i in to_send%}
+      <p> {{i}}</p>
+    {%endfor%}-->
+    <script>
+    const chart_data = {{ chart_data|tojson }}
+    chartLib.makeChart(chart_data)
+    window.alert("sometext")
+</script>
+</head>
+<body>
+
+</body>
+</html>
