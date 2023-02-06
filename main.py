@@ -1,15 +1,20 @@
+import time
 from copy import copy, deepcopy
 import numpy as np
 from numpy import random
 import matplotlib.pyplot as plt
 import json
-
+from Visuell.Visuell_pygame import Display as Dis
 
 R = np.random.rand
 Rn = lambda: (R - .5) * 2
 GLOBAL = {'Gene' : ['mutation rate', 'Offspring feeding', 'max speed', 'rand2'],
-                    'WORLD SIZE' : 100, 'START POPULATION' : 30, 'START FOOD' : 30}
+                    'WORLD SIZE' : 100, 'START POPULATION' : 30, 'START FOOD' : 130}
 GLOBAL['Gen Index'] =  {v : i for i, v in enumerate(GLOBAL['Gene'])}
+GLOBAL['cooldown'] = 2.5
+
+Display = Dis(GLOBAL['WORLD SIZE'] * 10, factor = 8)
+
 
 with open('GLOBALS.json', 'w') as outfile:
     json.dump(GLOBAL, outfile)
@@ -42,9 +47,7 @@ def encounter_handler(S1, S2):
 
     def Subjekt_to_Food_handler():
         if not S2.dead:
-            S1.state['saturation'] += max([1, S2.nutrition])
-            S2.nutrition -= max([1, S2.nutrition])
-        if S2.nutrition <= 0:
+            S1.state['saturation'] += S2.nutrition
             S2.dead = True
 
     if isinstance(S1, Subjekt) and isinstance(S2, Subjekt):
@@ -54,7 +57,7 @@ def encounter_handler(S1, S2):
 
 
 t = 0
-dt = 0.1
+dt = 1
 Specimen = [Subjekt() for _ in range(GLOBAL['START POPULATION'])]
 next_Specimen, next_Plants = [], []
 Plants = [Food() for _ in range(GLOBAL['START FOOD'])]
@@ -76,7 +79,7 @@ while True:
     for P in Plants:
         Interaction_traker[P.ID] = []
     t += dt
-    if R()<0:
+    if R() < 0.2:
         next_Plants.append(Food())
     for P in Plants:
         world[P.x][P.y].append(P)
@@ -86,23 +89,27 @@ while True:
         An.state['pos'] += np.array([np.cos(An.state['direction']),
                                      np.sin(An.state['direction'])])*stepsize
         An.state['saturation'] -= stepsize**2/10
-        world[int(An.x)][int(An.y)].append(An)
+        world[int(An.x)][int(An.y)] += [An]
 
-
-    for Ind in Specimen:
+    for Ind in np.random.permutation(Specimen):
+        Ind.update()
+        if time.time() - Ind.timestamp < GLOBAL['cooldown']:
+            continue
         base = [Ind.x, Ind.y]
         for x in range(-2, 3):
-            for y in range(-2, 3):
+            for y in range(-2, 1):
                 for other in world[(base[0] + x)%GLOBAL['WORLD SIZE']][(base[1] + y)%GLOBAL['WORLD SIZE']]:
-                    if not   ((other.ID in Interaction_traker[Ind.ID]) or (Ind.ID in Interaction_traker[other.ID])):
-
+                    if (not   ((other.ID in Interaction_traker[Ind.ID]) or (Ind.ID in Interaction_traker[other.ID]))) and (-other.timestamp + time.time()) > GLOBAL['cooldown']:
+                        other.timestamp = time.time()
+                        Ind.timestamp = time.time()
                         encounter_handler(Ind, other)
                         Interaction_traker[Ind.ID].append(other.ID)
-        Ind.update()
+
 
     delete_the_dead()
+    Display.step(Entitys=Plants + Specimen)
     assert len(Specimen) != 0
-    print(f'Plants: {len(Plants)}, Subjects: {len(Specimen)} , {len(next_Specimen)}, health: {Specimen[0].state["health"]}')
+    print(f'Plants: {len(Plants)}, Subjects: {len(Specimen)} , {len(next_Specimen)}, health: {Specimen[0].x}, t: {t}')
 
 
 

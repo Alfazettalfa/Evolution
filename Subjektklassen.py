@@ -1,11 +1,14 @@
+import time
+
 from numpy import random
 from numpy.random import randint as RInt
 import numpy as np
 import json
+from decimal import Decimal
 
 
 R = random.rand
-Rn = lambda: (R() - 1)*2
+Rn = lambda: (R() - 0.5)*2
 
 with open('GLOBALS.json', 'r') as file:
     GLOBAL = json.load(file)
@@ -20,6 +23,11 @@ class Subjekt:
     def y(self):
         return int(self.state['pos'][1]) % GLOBAL['WORLD SIZE']
 
+    def posf(self):
+        x, y = self.state['pos']
+        return np.array((Decimal(str(x)) % Decimal(str(GLOBAL['WORLD SIZE'])),
+                         Decimal(str(y)) % Decimal(str(GLOBAL['WORLD SIZE']))))
+
     @staticmethod
     def normalize(x):
         return x
@@ -29,7 +37,10 @@ class Subjekt:
         return {'taste': R(len(GLOBAL['Gene'])), 'saturation' : random.randint(10),
                 'health' : R(), 'pos': R(2)*GLOBAL['WORLD SIZE'], 'direction' : R()*2*np.pi}
 
-    def __init__(self, gene = R(len(GLOBAL["Gene"])), state = {} ):
+    def __init__(self, gene = [], state = {} ):
+        if gene == []:
+            gene = R(len(GLOBAL["Gene"]))
+        self.timestamp = time.time()
         self.ID = random.randint(0, 10**6)
         self.state = Subjekt.get_random_state() if state == {} else state
         self.gene = gene
@@ -57,29 +68,31 @@ class Subjekt:
         self.state['saturation'] -= self.gene[GLOBAL['Gen Index']['Offspring feeding']] * self.state['saturation']
         other.state['saturation'] -= other.gene[GLOBAL['Gen Index']['Offspring feeding']] * other.state['saturation']
         for para in ['health', 'pos', 'direction']: new_state[para] = (other.state[para] + self.state[para])/2
-        self.state['health'] *= 1/2
-        other.state['health'] *= 1/2
+        self.state['health'] *= 0.4
+        other.state['health'] *= 0.4
         return new_state
 
     def direction_function(self):
-        return self.state['pos'] + Rn()/5
+        return self.state['direction'] + Rn()/5
 
     def stepsize_function(self):
         return self.gene[GLOBAL['Gen Index']['max speed']]
 
     def update(self):
-        self.state['saturation'] *= 0.9
+        self.state['saturation'] *= 0.99999
         if self.state['saturation'] > 10:
             self.state['health'] += .1
             self.state['saturation'] -= .1
         if self.state['saturation'] < 1:
-            self.state['health'] -= .03
+            self.state['health'] -= .005
         if self.state['health'] <= 0.1:
             self.dead = True
 
 class Food:
-    def __init__(self, x = random.randint(GLOBAL['WORLD SIZE']), y = random.randint(GLOBAL['WORLD SIZE'])):
+    def __init__(self, x = False, y = False):
+        self.timestamp = time.time()
         self.ID = -1 * random.randint(0, 10 ** 6)
         self.dead = False
         self.nutrition = RInt(1, 11)
-        self.x, self.y = x, y
+        if not x:
+            self.x, self.y = random.randint(GLOBAL['WORLD SIZE'], size=(2))
